@@ -1,7 +1,7 @@
-3400ba3c85d290a674d61abe188c854c *DESCRIPTION
+e562fbf4255b561746986b5d989ad44b *DESCRIPTION
 7d82c4afe0890589ae2b7cb2c01a891d *NAMESPACE
 886f773ec0f297d17c0eb5a91e25402b *R/data.R
-7fc14e4aeb731456e2981c416b5b56ad *R/functions.R
+ebb19f74ed63e90010d7652f978086d7 *R/functions.R
 4b2eb44b5b47020eae3ecee4d25f62c8 *R/imports.R
 cfc9a3c6b4071a36440e56f70db7c56f *data/dades_gull.RData
 5f1771ff0509f2535b86e2dc383000f8 *man/FD_data.Rd
@@ -13,7 +13,7 @@ cdd3a49f599d2f08f291caee8128f818 *man/boot_ICC.Rd
 32b3dcd0a2e52fe610a559856b736258 *man/genHD.Rd
 54cb921d91211f56c625f7595d94cf99 *man/get_data.Rd
 1c914c0e241aafaa9cee7ad0199346b4 *man/gull_data.Rd
-e4ceeef9e75d3ac62f1e1be4fabbbaca *man/iccTraj.Rd
+8fc92c8a1e920863405b4218a208cf25 *man/iccTraj.Rd
 dbda5968c3cf766934818c23310661ab *man/interval.Rd
 2507d8348a2e4073c7d599c3c975ce9f *man/ntrips.Rd
 affa89549fa1a868a72c6301073cfe1e *man/print.iccTraj.Rd

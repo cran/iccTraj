@@ -14,6 +14,7 @@ iccTraj(
   projection = CRS("+proj=longlat"),
   origin = "1970-01-01 UTC",
   parallel = TRUE,
+  individual = TRUE,
   distance = c("H", "F"),
   bootCI = TRUE,
   nBoot = 100,
@@ -39,6 +40,8 @@ iccTraj(
 
 \item{parallel}{TRUE/FALSE value. Use parallel computation? Default value is TRUE.}
 
+\item{individual}{TRUE/FALSE value. Compute individual within-subjects variances? Default value is TRUE.}
+
 \item{distance}{Metric used to compute the distances between trajectories. Options are **H** for median Hausforff distance, and **F** for discrete Fréchet distance.}
 
 \item{bootCI}{TRUE/FALSE value. If TRUE it will generate boostrap resamples. Default value is TRUE.}
@@ -52,7 +55,8 @@ An object of class *iccTraj*.The output is a list with the following components:
 \itemize{
   \item *est*. Data frame with the following estimates: the ICC (r), the subjects' mean sum-of-squares (MSA), the between-subjects variance (sb), the total variance (st), and the within-subjects variance (se).
   \item *boot*. If bootCI argument is set to TRUE, data frame with the bootstrap estimates.
-  \item *D*. Data frame with the pairwise distances among trajectories-
+  \item *D*. Data frame with the pairwise distances among trajectories.
+  \item *indW* Data frame with the follwoing columns: the subject's identifier (ID), the individual within-subjects variances (w), and the number of trips (n).
 }
 }
 \description{

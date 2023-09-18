@@ -322,6 +322,7 @@ boot_ICC<-function(X,nt,Bmat,indB){
 #' @param projection Projection string of class CRS-class.
 #' @param origin Optional. Origin of the date-time. Only needed in the internal process to create an object of type POSIXct.
 #' @param parallel TRUE/FALSE value. Use parallel computation? Default value is TRUE.
+#' @param individual TRUE/FALSE value. Compute individual within-subjects variances? Default value is TRUE.
 #' @param distance Metric used to compute the distances between trajectories. Options are **H** for median Hausforff distance, and **F** for discrete Fréchet distance.
 #' @param bootCI TRUE/FALSE value. If TRUE it will generate boostrap resamples. Default value is TRUE.
 #' @param nBoot Numeric. Number of bootstrap resamples. Ignored if \code{"bootCI"} is FALSE. Default value is 100.
@@ -330,7 +331,8 @@ boot_ICC<-function(X,nt,Bmat,indB){
 #' \itemize{
 #'   \item *est*. Data frame with the following estimates: the ICC (r), the subjects' mean sum-of-squares (MSA), the between-subjects variance (sb), the total variance (st), and the within-subjects variance (se).
 #'   \item *boot*. If bootCI argument is set to TRUE, data frame with the bootstrap estimates.
-#'   \item *D*. Data frame with the pairwise distances among trajectories-
+#'   \item *D*. Data frame with the pairwise distances among trajectories.
+#'   \item *indW* Data frame with the follwoing columns: the subject's identifier (ID), the individual within-subjects variances (w), and the number of trips (n).
 #' }
 #' @details
 #' The intraclass correlation coefficient is estimated using the distance matrix among trajectories.
@@ -355,7 +357,7 @@ boot_ICC<-function(X,nt,Bmat,indB){
 #'}
 
 iccTraj<-function(data,ID,trip,LON,LAT,time,projection=CRS("+proj=longlat"),
-                  origin="1970-01-01 UTC",parallel=TRUE, distance=c("H","F"),bootCI=TRUE,
+                  origin="1970-01-01 UTC",parallel=TRUE, individual=TRUE, distance=c("H","F"),bootCI=TRUE,
                   nBoot=100,q=0.5){
 
   t1<-Sys.time()
@@ -407,6 +409,21 @@ iccTraj<-function(data,ID,trip,LON,LAT,time,projection=CRS("+proj=longlat"),
     ICC_boot <- NULL
   }
 
+
+  if (individual == TRUE){
+    message("Computing individual within-subjects variances...")
+
+    wind_data<-1:length(id) %>% map_df(function(i){
+
+      wind<-within_ind_var(D1,id[i])
+      data.frame(ID=id[i],w=wind$w,n=wind$n)
+    })
+
+  } else if (individual == FALSE) {
+    wind_data <- NULL
+  }
+
+
   t2<-Sys.time()
 
 
@@ -414,7 +431,7 @@ iccTraj<-function(data,ID,trip,LON,LAT,time,projection=CRS("+proj=longlat"),
 
   message(paste("Process took",dt,attr(difftime(t2,t1), "units")
             ,sep=" "))
-  out<-list(est=est,boot=ICC_boot,D=D1)
+  out<-list(est=est,boot=ICC_boot,D=D1,indW=wind_data)
   class(out)<-c("iccTraj","list")
   return(out)
 }
@@ -495,3 +512,28 @@ interval<-function(x,conf=0.95,method=c("EB","AN","ZT")){
 
 }
 
+
+within_ind_var<-function(data,id){
+
+  dist_data<-data %>% filter(ID1==id, ID2==id)
+
+  n<-(sqrt(nrow(dist_data)*8+1)+1)/2
+
+  if (n>1){
+
+  X<-matrix(0,nrow=n,ncol=n,byrow=T)
+  X[lower.tri(X)]<-dist_data$d
+  X<-t(X)
+  X[lower.tri(X)]<-dist_data$d
+
+  A<-(X^2)*(-0.5)
+  J<-matrix(rep(1,n^2),nrow=n)
+  I<-diag(n)
+
+  P<-(I-J/n)
+  G<-P%*%A%*%P
+  w=sum(diag(G))/(n-1)
+  } else if (n==1) w<-0
+  data.frame(w,n=n)
+
+}
