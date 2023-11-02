@@ -19,7 +19,7 @@ get_data<-function(data,ID,trip,LON,LAT,time){
   vLON <- data[,LON]
   vLAT <- data[,LAT]
   vtime <- data[,time]
-  idtrip = paste(vid,vtrip,sep="")
+  idtrip = paste(vid,vtrip,sep="_")
   x<-data.frame(ID=vid,trip=vtrip,LON=vLON,LAT=vLAT,time=vtime,idtrip=idtrip)
   return(x)
 }
@@ -275,7 +275,8 @@ ICC<-function(X,nt){
   sb<-(MSA-se)/n0
   st<-sb+se
   sb2=MSA/n0
-  out<-data.frame(MSA,sb,st,se,r=sb/st)
+  r=min(sb/st,1)
+  out<-data.frame(MSA,sb,st,se,r)
   return(out)
 }
 
@@ -332,7 +333,7 @@ boot_ICC<-function(X,nt,Bmat,indB){
 #'   \item *est*. Data frame with the following estimates: the ICC (r), the subjects' mean sum-of-squares (MSA), the between-subjects variance (sb), the total variance (st), and the within-subjects variance (se).
 #'   \item *boot*. If bootCI argument is set to TRUE, data frame with the bootstrap estimates.
 #'   \item *D*. Data frame with the pairwise distances among trajectories.
-#'   \item *indW* Data frame with the follwoing columns: the subject's identifier (ID), the individual within-subjects variances (w), and the number of trips (n).
+#'   \item *indW* Data frame with the following columns: the subject's identifier (ID), the individual within-subjects variances (w), the individual ICC (r), and the number of trips (n).
 #' }
 #' @details
 #' The intraclass correlation coefficient is estimated using the distance matrix among trajectories.
@@ -416,7 +417,7 @@ iccTraj<-function(data,ID,trip,LON,LAT,time,projection=CRS("+proj=longlat"),
     wind_data<-1:length(id) %>% map_df(function(i){
 
       wind<-within_ind_var(D1,id[i])
-      data.frame(ID=id[i],w=wind$w,n=wind$n)
+      data.frame(ID=id[i],w=wind$w,r=est$sb/(est$sb+wind$w),n=wind$n)
     })
 
   } else if (individual == FALSE) {

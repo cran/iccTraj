@@ -56,7 +56,7 @@ An object of class *iccTraj*.The output is a list with the following components:
   \item *est*. Data frame with the following estimates: the ICC (r), the subjects' mean sum-of-squares (MSA), the between-subjects variance (sb), the total variance (st), and the within-subjects variance (se).
   \item *boot*. If bootCI argument is set to TRUE, data frame with the bootstrap estimates.
   \item *D*. Data frame with the pairwise distances among trajectories.
-  \item *indW* Data frame with the follwoing columns: the subject's identifier (ID), the individual within-subjects variances (w), and the number of trips (n).
+  \item *indW* Data frame with the following columns: the subject's identifier (ID), the individual within-subjects variances (w), the individual ICC (r), and the number of trips (n).
 }
 }
 \description{
