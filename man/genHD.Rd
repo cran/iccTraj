@@ -4,7 +4,13 @@
 \alias{genHD}
 \title{Generates a data frame with the pairwise distances between trajectories}
 \usage{
-genHD(data_list, parallel = TRUE, distance = c("H", "F"), q = 0.5)
+genHD(
+  data_list,
+  parallel = TRUE,
+  distance = c("H", "F"),
+  q = 0.5,
+  future_seed = 123
+)
 }
 \arguments{
 \item{data_list}{A list created with \code{"tr_gen"} function}
@@ -14,6 +20,8 @@ genHD(data_list, parallel = TRUE, distance = c("H", "F"), q = 0.5)
 \item{distance}{Metric used to compute the distances between trajectories. Options are **H** for median Hausforff distance, and **F** for discrete Fréchet distance.}
 
 \item{q}{Quantile for the extended Hausdorff distance. Default value q=0.5 leads to median Hausdorff distance.}
+
+\item{future_seed}{Logical/Integer. The seed to be used for parallellization. Further details in \code{furrr_options}.}
 }
 \value{
 A data frame with the subjects and trips identifiers and their distances

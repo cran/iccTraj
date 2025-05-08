@@ -132,40 +132,53 @@ FD_data<-function(data,i,j){
 #' @param parallel TRUE/FALSE value. Use parallel computation? Default value is TRUE.
 #' @param distance Metric used to compute the distances between trajectories. Options are **H** for median Hausforff distance, and **F** for discrete Fréchet distance.
 #' @param q Quantile for the extended Hausdorff distance. Default value q=0.5 leads to median Hausdorff distance.
+#' @param future_seed Logical/Integer. The seed to be used for parallellization. Further details in \code{furrr_options}.
 #' @return A data frame with the subjects and trips identifiers and their distances
 
-genHD<-function(data_list,parallel=TRUE,distance=c("H","F"),q=0.5){
+
+
+genHD<-function(data_list,parallel=TRUE,distance=c("H","F"),q=0.5,future_seed=123){
 
   distance<-match.arg(distance)
 
   k<-length(data_list)
 
-  if (parallel==TRUE){
+  progressr::handlers(global = FALSE)
 
-    # Hausdorff distance
-    nc<-detectCores()
-    cl <- makeCluster(getOption("cl.cores", nc))
-    registerDoParallel(cl)
-    D<-
-      foreach(i=(1:(k-1)),.combine=rbind) %:%
-      foreach(j=(i+1):k,.packages=c("dplyr","purrr","sp","trajectories","iccTraj"),
-              .combine=rbind) %dopar%{
-                if (distance=="H") {
-                  iccTraj::HD_data(data_list,i,j,q=q)
-                } else if (distance=="F") {
-                  iccTraj::FD_data(data_list,i,j)
-                }
+  if (parallel == TRUE) {
+    ncores <- parallelly::availableCores(omit = 1)
 
-              }
+    oplan <- future::plan("multisession", workers = ncores)
+    on.exit(future::plan(oplan))
 
-    registerDoSEQ()
-    stopCluster(cl)
+
+    progressr::with_progress({
+      p <- progressr::progressor(along = 1:(k-1))
+      D <- furrr::future_map_dfr(1:(k-1), function(i) {
+        p()
+        Sys.sleep(.2)
+        furrr::future_map_dfr((i+1):k, function(j) {
+          if (distance == "H") {
+            iccTraj::HD_data(data_list, i, j, q = q)
+          } else if (distance == "F") {
+            iccTraj::FD_data(data_list, i, j)
+          }
+        })
+      }, .options = furrr::furrr_options(seed = future_seed))
+    })
 
   }
 
+
   if (parallel==FALSE){
 
+  progressr::with_progress({
+    p <- progressr::progressor(along = 1:(k-1))
+
+
     D<- 1:(k-1) %>% map_df(function(i){
+      p()
+      Sys.sleep(.2)
       j=(i+1):k %>% map_df(function(j){
         if (distance=="H") {
           HD_data(data_list,i,j,q=0.5)
@@ -176,10 +189,13 @@ genHD<-function(data_list,parallel=TRUE,distance=c("H","F"),q=0.5){
       )
     }
     )
+  })
   }
+
 
   return(D)
 }
+
 
 
 #' Computes the number of trips by subject
@@ -242,7 +258,7 @@ dist_mat<-function(dataD,nt){
 #' @return Data frame with the estimates of the ICC (r), the subjects' mean sum-of-squares (MSA), the between-subjects variance (sb), the total variance (st), and the within-subjects variance (se).
 #' @export
 #' @details
-#'The intraclass correlation coeffcient is estimated using the distance matrix among trajectories.
+#'The intraclass correlation coefficient is estimated using the distance matrix among trajectories.
 
 
 ICC<-function(X,nt){
@@ -324,16 +340,17 @@ boot_ICC<-function(X,nt,Bmat,indB){
 #' @param origin Optional. Origin of the date-time. Only needed in the internal process to create an object of type POSIXct.
 #' @param parallel TRUE/FALSE value. Use parallel computation? Default value is TRUE.
 #' @param individual TRUE/FALSE value. Compute individual within-subjects variances? Default value is TRUE.
-#' @param distance Metric used to compute the distances between trajectories. Options are **H** for median Hausforff distance, and **F** for discrete Fréchet distance.
+#' @param distance Metric used to compute the distances between trajectories. Options are "H" for median Hausforff distance, and "F" for discrete Fréchet distance.
 #' @param bootCI TRUE/FALSE value. If TRUE it will generate boostrap resamples. Default value is TRUE.
-#' @param nBoot Numeric. Number of bootstrap resamples. Ignored if \code{"bootCI"} is FALSE. Default value is 100.
+#' @param nBoot Numeric. Number of bootstrap resamples. Ignored if \code{bootCI} is FALSE. Default value is 100.
 #' @param q Quantile for the extended Hausdorff distance. Default value q=0.5 leads to median Hausdorff distance.
-#' @return An object of class *iccTraj*.The output is a list with the following components:
+#' @param future_seed Logical/Integer. The seed to be used for parallellization. Further details in \code{\link[furrr]{furrr_options}}.
+#' @return An object of class \code{iccTraj}.The output is a list with the following components:
 #' \itemize{
-#'   \item *est*. Data frame with the following estimates: the ICC (r), the subjects' mean sum-of-squares (MSA), the between-subjects variance (sb), the total variance (st), and the within-subjects variance (se).
-#'   \item *boot*. If bootCI argument is set to TRUE, data frame with the bootstrap estimates.
-#'   \item *D*. Data frame with the pairwise distances among trajectories.
-#'   \item *indW* Data frame with the following columns: the subject's identifier (ID), the individual within-subjects variances (w), the individual ICC (r), and the number of trips (n).
+#'   \item \code{est}. Data frame with the following estimates: the ICC (r), the subjects' mean sum-of-squares (MSA), the between-subjects variance (sb), the total variance (st), and the within-subjects variance (se).
+#'   \item \code{boot}. If bootCI argument is set to TRUE, data frame with the bootstrap estimates.
+#'   \item \code{D}. Data frame with the pairwise distances among trajectories.
+#'   \item \code{indW}. Data frame with the following columns: the subject's identifier (ID), the individual within-subjects variances (w), the individual ICC (r), and the number of trips (n).
 #' }
 #' @details
 #' The intraclass correlation coefficient is estimated using the distance matrix among trajectories.
@@ -359,7 +376,7 @@ boot_ICC<-function(X,nt,Bmat,indB){
 
 iccTraj<-function(data,ID,trip,LON,LAT,time,projection=CRS("+proj=longlat"),
                   origin="1970-01-01 UTC",parallel=TRUE, individual=TRUE, distance=c("H","F"),bootCI=TRUE,
-                  nBoot=100,q=0.5){
+                  nBoot=100,q=0.5,future_seed=123){
 
   t1<-Sys.time()
 
@@ -377,7 +394,7 @@ iccTraj<-function(data,ID,trip,LON,LAT,time,projection=CRS("+proj=longlat"),
 
   message("Generating distances...")
   # Generates dataframe with pairwise distances
-  D1<-genHD(data_list,parallel=parallel,distance,q=q)
+  D1<-genHD(data_list,parallel=parallel,distance,q=q,future_seed = future_seed)
 
   # Generates distance matrix
   Dmat<-dist_mat(D1,nt)
@@ -393,17 +410,26 @@ iccTraj<-function(data,ID,trip,LON,LAT,time,projection=CRS("+proj=longlat"),
   if (bootCI==TRUE){
     message("Bootstrapping...")
 
-    nc<-detectCores()
-    cl <- makeCluster(getOption("cl.cores", nc))
-    registerDoParallel(cl)
 
-    ICC_boot<-foreach(i=1:nBoot, .packages=c("dplyr","purrr","magic","iccTraj"),
-                      .combine=rbind) %dopar% {
-                          iccTraj::boot_ICC(X,nt,Bmat,i)
-                      }
+    ncores <- parallelly::availableCores(omit = 1)
 
-    registerDoSEQ()
-    stopCluster(cl)
+    oplan <- future::plan("multisession", workers = ncores)
+    on.exit(future::plan(oplan))
+
+    #progressr::handlers(global = FALSE)
+
+    progressr::with_progress({
+      p <- progressr::progressor(along = 1:nBoot)
+
+
+      ICC_boot <- furrr::future_map_dfr(1:nBoot, ~{
+        p()
+        Sys.sleep(.2)
+        boot_ICC(X,nt,Bmat,.x)
+      }, .options = furrr::furrr_options(seed = future_seed),p=p)
+    })
+
+
     message(paste(nBoot,"bootstrap samples generated",sep=" "))
 
   } else if (bootCI == FALSE) {
@@ -431,13 +457,11 @@ iccTraj<-function(data,ID,trip,LON,LAT,time,projection=CRS("+proj=longlat"),
   dt<-round(as.numeric(difftime(t2,t1)),2)
 
   message(paste("Process took",dt,attr(difftime(t2,t1), "units")
-            ,sep=" "))
+                ,sep=" "))
   out<-list(est=est,boot=ICC_boot,D=D1,indW=wind_data)
   class(out)<-c("iccTraj","list")
   return(out)
 }
-
-
 
 #' Prints the ICC
 #' @keywords internal
@@ -451,12 +475,16 @@ print.iccTraj<-function(x,...){
 
 #' Computes the confidence interval for the ICC
 #' @export
-#' @param x An object of class \code{"iccTraj"}
+#' @param x An object of class \code{iccTraj}
 #' @param conf Numeric. Level of confidence. Default is set to 0.95.
-#' @param method String. Method used to estimate the confidence interval. Accepted values are **EB** for Empirical Bootstrap, **AN** for asymptotic Normal, and **ZT** for asymptotic Normal using the Z-transformation.
+#' @param method String. Method used to estimate the confidence interval. Accepted values are: "BCa" for bias-corrected and accelerated bootstrap,  "EB" for empirical bootstrap, "Perc" for percentile bootstrap, "AN" for asymptotic Normal, and "ZT" for asymptotic Normal using the Z-transformation.
 #' @return A vector with the two boundaries of the confidence interval.
 #' @details
-#' Let \eqn{\hat{\theta}} denote the ICC sample estimate and \eqn{\theta_i^{B}} denote the ICC bootstrap estimates with \eqn{i=1,\ldots,B}. Let \eqn{\delta_{\alpha/2}^{B}} and \eqn{\delta_{1-\alpha/2}^{B}} be the \eqn{\frac{\alpha}{2}} and \eqn{1-\frac{\alpha}{2}} percentiles of \eqn{\delta_{i}^{B}=\theta_i^{B}-\hat{\theta}}. The empirical bootstrap confidence interval is then estimated as \eqn{\hat{\theta}+\delta_{\alpha/2}^{B},\hat{\theta}+\delta_{1-\alpha/2}^{B}}.
+#' Let \eqn{\hat{\theta}} denote the ICC sample estimate and \eqn{\theta_i^{B}} denote the ICC bootstrap estimates with \eqn{i=1,\ldots,B}. Let \eqn{\delta_{\alpha/2}^{B}} and \eqn{\delta_{1-\alpha/2}^{B}} be the \eqn{\frac{\alpha}{2}} and \eqn{1-\frac{\alpha}{2}} percentiles of \eqn{\delta_{i}^{B}=\theta_i^{B}-\hat{\theta}}.
+#'
+#' The percentile bootstrap confidence interval is computed as \eqn{\hat{\theta}+\delta_{\alpha/2}^{B},\hat{\theta}+\delta_{1-\alpha/2}^{B}}.
+#'
+#' The empirical bootstrap confidence interval is estimated as \eqn{\hat{\theta}-\delta_{1-\alpha/2}^{B},\hat{\theta}-\delta_{\alpha/2}^{B}}
 #'
 #' Asymptotic Normal (AN) interval is obtained as \eqn{\hat{\theta} \pm Z_{1-\alpha/2}*SE_B} where \eqn{SE_B} denotes the standard deviation of \eqn{\theta_i^{B}}, and \eqn{Z_{1-\alpha/2}} stands for the \eqn{1-\alpha/2} quantile of the standard Normal distribution.
 #'
@@ -471,22 +499,23 @@ print.iccTraj<-function(x,...){
 #' interval(Hd)
 #'}
 
-
-interval<-function(x,conf=0.95,method=c("EB","AN","ZT")){
+interval<-function(x,conf=0.95,method=c("BCa","Perc","EB","AN","ZT")){
 
   method<-match.arg(method)
   q <- (1-conf)/2
 
+
   if (class(x)[1]=="iccTraj"){
-    if (is.null(x$boot)==TRUE){
-      print("No bootstrap samples")
+    if (is.null(x$boot)){
+      message("No bootstrap samples. Confidence interval is not computed")
       ci<-NULL
-    } else if (is.null(x$boot)==FALSE){
+      }
+    else if (!is.null(x$boot)){
 
       # Empirical bootstrap
-      if (method=="EB"){
+      if (method=="Perc"){
         ci<-x$est$r+quantile(x$boot$r-x$est$r,probs=c(q,1-q))
-        met<-"Empirical bootstrap"
+        met<-"Percentile"
       }
       # Asymptotic Normal
       if (method=="AN"){
@@ -500,14 +529,24 @@ interval<-function(x,conf=0.95,method=c("EB","AN","ZT")){
         ci<-tanh(atanh(x$est$r)+c(-1,1)*qnorm(1-q)*se_z)
         met<-"Z-transformation"
       }
-
+      if (method=="EB"){
+        ci<-2*x$est$r-quantile(x$boot$r,probs=c(q,1-q))
+        ci<-ci[2:1]
+        names(ci)<-names(ci)[2:1]
+        met<-"Empirical bootstrap"
+      }
+      if (method=="BCa"){
+        ci<-bca(x$boot$r, x$est$r, cl = conf)
+        met<-"BCa"
+      }
+      message("Method:",met,sep="")
     }
-
-  }  else if (class(x)[1]!="iccTraj") {
-    print("Object is not iccTraj class")
-    ci<-NULL
   }
-  message("Method:",met,sep="")
+  else if (class(x)[1]!="iccTraj") {
+    message("Object is not iccTraj class")
+    ci<-NULL
+   }
+
 
   return(ci)
 
@@ -537,4 +576,27 @@ within_ind_var<-function(data,id){
   } else if (n==1) w<-0
   data.frame(w,n=n)
 
+}
+
+
+bca<-function (theta, t0, cl = 0.95)
+{
+
+  theta<-theta[!is.na(theta)]
+  cl_low <- (1 - cl)/2
+  cl_hi <- 1 - cl_low
+  nsims <- length(theta)
+  z.inv <- length(theta[theta < t0])/nsims
+  z <- qnorm(z.inv)
+  U <- (nsims - 1) * (t0 - theta)
+  A1 <- sum(U^3)
+  A2 <- 6 * (sum(U^2))^{
+    3/2
+  }
+  a <- A1/A2
+  ll.inv <- pnorm(z + (z + qnorm(cl_low))/(1 - a * (z + qnorm(cl_low))))
+  ll <- quantile(theta, ll.inv, names = FALSE)
+  ul.inv <- pnorm(z + (z + qnorm(cl_hi))/(1 - a * (z + qnorm(cl_hi))))
+  ul <- quantile(theta, ul.inv, names = FALSE)
+  return(c(ll, ul))
 }

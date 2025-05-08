@@ -4,14 +4,14 @@
 \alias{interval}
 \title{Computes the confidence interval for the ICC}
 \usage{
-interval(x, conf = 0.95, method = c("EB", "AN", "ZT"))
+interval(x, conf = 0.95, method = c("BCa", "Perc", "EB", "AN", "ZT"))
 }
 \arguments{
-\item{x}{An object of class \code{"iccTraj"}}
+\item{x}{An object of class \code{iccTraj}}
 
 \item{conf}{Numeric. Level of confidence. Default is set to 0.95.}
 
-\item{method}{String. Method used to estimate the confidence interval. Accepted values are **EB** for Empirical Bootstrap, **AN** for asymptotic Normal, and **ZT** for asymptotic Normal using the Z-transformation.}
+\item{method}{String. Method used to estimate the confidence interval. Accepted values are: "BCa" for bias-corrected and accelerated bootstrap,  "EB" for empirical bootstrap, "Perc" for percentile bootstrap, "AN" for asymptotic Normal, and "ZT" for asymptotic Normal using the Z-transformation.}
 }
 \value{
 A vector with the two boundaries of the confidence interval.
@@ -20,7 +20,11 @@ A vector with the two boundaries of the confidence interval.
 Computes the confidence interval for the ICC
 }
 \details{
-Let \eqn{\hat{\theta}} denote the ICC sample estimate and \eqn{\theta_i^{B}} denote the ICC bootstrap estimates with \eqn{i=1,\ldots,B}. Let \eqn{\delta_{\alpha/2}^{B}} and \eqn{\delta_{1-\alpha/2}^{B}} be the \eqn{\frac{\alpha}{2}} and \eqn{1-\frac{\alpha}{2}} percentiles of \eqn{\delta_{i}^{B}=\theta_i^{B}-\hat{\theta}}. The empirical bootstrap confidence interval is then estimated as \eqn{\hat{\theta}+\delta_{\alpha/2}^{B},\hat{\theta}+\delta_{1-\alpha/2}^{B}}.
+Let \eqn{\hat{\theta}} denote the ICC sample estimate and \eqn{\theta_i^{B}} denote the ICC bootstrap estimates with \eqn{i=1,\ldots,B}. Let \eqn{\delta_{\alpha/2}^{B}} and \eqn{\delta_{1-\alpha/2}^{B}} be the \eqn{\frac{\alpha}{2}} and \eqn{1-\frac{\alpha}{2}} percentiles of \eqn{\delta_{i}^{B}=\theta_i^{B}-\hat{\theta}}.
+
+The percentile bootstrap confidence interval is computed as \eqn{\hat{\theta}+\delta_{\alpha/2}^{B},\hat{\theta}+\delta_{1-\alpha/2}^{B}}.
+
+The empirical bootstrap confidence interval is estimated as \eqn{\hat{\theta}-\delta_{1-\alpha/2}^{B},\hat{\theta}-\delta_{\alpha/2}^{B}}
 
 Asymptotic Normal (AN) interval is obtained as \eqn{\hat{\theta} \pm Z_{1-\alpha/2}*SE_B} where \eqn{SE_B} denotes the standard deviation of \eqn{\theta_i^{B}}, and \eqn{Z_{1-\alpha/2}} stands for the \eqn{1-\alpha/2} quantile of the standard Normal distribution.
 

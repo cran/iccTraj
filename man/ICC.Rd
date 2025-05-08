@@ -18,5 +18,5 @@ Data frame with the estimates of the ICC (r), the subjects' mean sum-of-squares 
 Computes the intraclass correlation coefficient (ICC) using a matrix of distances.
 }
 \details{
-The intraclass correlation coeffcient is estimated using the distance matrix among trajectories.
+The intraclass correlation coefficient is estimated using the distance matrix among trajectories.
 }

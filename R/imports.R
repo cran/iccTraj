@@ -5,8 +5,11 @@
 #' @importFrom magic adiag
 #' @importFrom utils combn globalVariables
 #' @importFrom stats quantile sd qnorm
-#' @importFrom foreach registerDoSEQ %dopar% foreach %:%
 #' @importFrom dplyr %>%
-#' @import doParallel parallel dplyr
+#' @importFrom future plan
+#' @importFrom parallelly availableCores
+#' @importFrom progressr progressor with_progress handlers
+#' @importFrom stats pnorm
+#' @import parallel dplyr
 utils::globalVariables(c("ID","trip","ID1b", "trip1", "ID2b","trip2","ID1","ID2","d","ID2b","trip2b","i","j","idtrip"))
 NULL
